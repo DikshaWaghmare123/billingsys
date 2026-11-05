@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ronny’s Billing Counter</title>
+<link rel="stylesheet" href="styles.css">
+
+</head>
+<body>
+<main>
+ <h1>Ronny’s Craving Point</h1>
+ <p class="sub">Billing counter. Tap an item to add it.</p>
+
+ <div class="menu" id="menu"></div>
+
+ <section class="bill" aria-live="polite">
+  <h2>Current bill <span id="billno"></span></h2>
+  <div id="keepnote" style="color:var(--yel);font-size:14px"></div>
+  <div id="lines"></div>
+  <div class="total"><span>Total</span><span class="t" id="total">₹0</span></div>
+  <div class="pay">
+   <div><label for="recv">Cash received (₹)</label><input id="recv" type="number" inputmode="numeric" min="0" placeholder="0"></div>
+   <div><label>Change to return</label><div class="chg" id="chg">₹0</div></div>
+  </div>
+  <div class="cash" id="cash"></div>
+  <div style="margin-top:12px"><label for="upi">Shop UPI ID for the bill QR (optional)</label><input id="upi" type="text" placeholder="name@upi" autocapitalize="none" autocomplete="off"></div>
+  <div class="acts">
+   <button class="btn sec" id="proc" disabled>Save as in process</button>
+   <button class="btn sec" id="clear">Clear bill</button>
+   <button class="btn pri" id="done" disabled>Paid and print bill</button>
+  </div>
+ </section>
+ <section class="bill" id="ord">
+  <h2>Orders <span id="ordcnt"></span></h2>
+  <div class="tabs"><button data-f="proc" class="on">In process</button><button data-f="paid">Paid</button></div>
+  <div id="olist"></div>
+ </section>
+ <section class="bill" id="rep">
+  <div id="wk"></div>
+  <h2>Dashboard <span id="weekrange"></span></h2>
+  <div class="tabs" id="ptabs"><button data-p="day" class="on">Daily</button><button data-p="week">Weekly</button><button data-p="month">Monthly</button></div>
+  <div class="kpi"><div><label>Revenue (paid)</label><b id="k1">₹0</b></div><div><label>Paid bills</label><b id="k2">0</b></div><div><label>In process</label><b id="k3">0</b></div><div><label>Average bill</label><b id="k4">₹0</b></div></div>
+  <div id="bars" class="bars"></div>
+  <div id="days"></div>
+  <h2 style="margin-top:14px;font-size:18px" id="itlbl">Items sold</h2><div id="topitems"></div>
+  <div class="acts"><button class="btn pri" id="xl">Download master Excel</button><button class="btn sec" id="refresh">Refresh from OneDrive</button><button class="btn sec" id="imp">Load from Excel</button><button class="btn sec" id="clrw">Clear all data</button><input type="file" id="fimp" accept=".xlsx,.xls" hidden></div>
+  <div class="today" id="msg"></div>
+ </section>
+ <div class="today" id="today"></div>
+
+ <div id="ov"><div id="paper"><div id="rcpt"></div></div><div class="ovb"><button class="btn pri" id="pr">Print bill</button><button class="btn sec" id="cl">Close</button></div></div>
+</main>
+<script src="script.js"></script>
+
+</body>
+</html>
