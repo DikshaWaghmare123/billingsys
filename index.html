@@ -45,12 +45,14 @@
   <div id="days"></div>
   <h2 style="margin-top:14px;font-size:18px" id="itlbl">Items sold</h2><div id="topitems"></div>
   <div class="acts"><button class="btn pri" id="xl">Download master Excel</button><button class="btn sec" id="refresh">Refresh from OneDrive</button><button class="btn sec" id="imp">Load from Excel</button><button class="btn sec" id="clrw">Clear all data</button><input type="file" id="fimp" accept=".xlsx,.xls" hidden></div>
+  <div class="acts" style="margin-top:10px"><button class="btn sec" id="odSignin">Sign in OneDrive</button><button class="btn pri" id="odUpload">Upload to OneDrive</button></div>
   <div class="today" id="msg"></div>
  </section>
  <div class="today" id="today"></div>
 
  <div id="ov"><div id="paper"><div id="rcpt"></div></div><div class="ovb"><button class="btn pri" id="pr">Print bill</button><button class="btn sec" id="cl">Close</button></div></div>
 </main>
+<script src="https://alcdn.msauth.net/browser/2.14.2/js/msal-browser.min.js"></script>
 <script src="script.js"></script>
 
 </body>

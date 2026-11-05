@@ -2336,7 +2336,14 @@ var cart={}, store={bill:1,sales:0,bills:0,day:""};
 var $=function(i){return document.getElementById(i)};
 var MASTER_WORKBOOK_KEY="ronny_master_xls";
 var MASTER_FILE_URL="https://1drv.ms/x/c/97DE526B493CE824/IQCji5PzTSKDT5_Xh9XGAzw_AYZCUvzAMnReJUDs0c5NPH0?e=AHjB2S";
+var ONE_DRIVE_CONFIG={
+ clientId:"",
+ scopes:["Files.ReadWrite.All","User.Read"],
+ fileName:"ronnys-billing-data.json",
+ folderName:"Ronnys Billing"
+};
 function isFileProtocol(){return location.protocol==="file:";}
+function isSecureContext(){return location.protocol==="https:"||location.hostname==="localhost"||location.hostname==="127.0.0.1";}
 function getMasterDownloadUrl(){return MASTER_FILE_URL && (MASTER_FILE_URL.indexOf("?")>=0?MASTER_FILE_URL+"&download=1":MASTER_FILE_URL+"?download=1");}
 function parseWorkbookRows(data){
  var wb=XLSX.read(data,{type:"array"}),ws=wb.Sheets["Orders"]||wb.Sheets[wb.SheetNames[0]],rows=ws?XLSX.utils.sheet_to_json(ws,{defval:""}):[];
@@ -2391,6 +2398,11 @@ function render(){
  $("today").textContent="Bills are saved in this browser on this device.";report();
  calc();
 }
+function qrUpiValue(value, amount, label){
+ var upi=(value||"").trim();
+ if(!upi){return "";}
+ return "upi://pay?pa="+encodeURIComponent(upi)+"&pn="+encodeURIComponent(label||"Billing Payment")+"&am="+amount+"&cu=INR&tn="+encodeURIComponent("Bill payment");
+}
 function calc(){
  var r=parseInt($("recv").value,10),t=total(),c=$("chg");
  if(isNaN(r)||!t){c.textContent="₹0";c.className="chg";return}
@@ -2401,13 +2413,13 @@ $("lines").onclick=function(e){var b=e.target.closest("button");if(b)add(b.datas
 $("recv").oninput=calc;
 $("clear").onclick=function(){cart={};$("recv").value="";render()};
 $("done").onclick=function(){
- var now=new Date(),t=total(),h='<div style="text-align:center"><div style="font-size:20px;font-weight:bold">RONNY’S CRAVING POINT</div>Vadapav Vibes Only<br>Laxmi Chowk, Marunji Road<br>Contact: 8767130395</div><hr>';
+ var now=new Date(),t=total(),h='<div style="text-align:center"><div style="font-size:20px;font-weight:bold">RONNY’S CRAVING POINT</div>Billing receipt</div><hr>';
  h+='<div>Bill #'+store.bill+' &nbsp; '+now.toLocaleString("en-IN")+'</div><hr>';
  Object.keys(cart).forEach(function(k){var m=find(k);h+='<div class="l"><span>'+m.name+' x'+cart[k]+'</span><span>₹'+m.price*cart[k]+'</span></div>'});
  h+='<hr><div class="l"><b>Total</b><b>₹'+t+'</b></div><hr>';
  var upi=($("upi").value||"").trim(),code,cap;
- if(upi){code='upi://pay?pa='+encodeURIComponent(upi)+'&pn='+encodeURIComponent('Ronnys Craving Point')+'&am='+t+'&cu=INR&tn='+encodeURIComponent('Bill '+store.bill);cap='Scan to pay ₹'+t}
- else{code='Ronnys Craving Point | Bill #'+store.bill+' | Total Rs '+t+' | '+now.toLocaleDateString('en-IN');cap='Scan for bill details'}
+ if(upi){code=qrUpiValue(upi,t,'Billing Payment');cap='Scan to pay ₹'+t}
+ else{code='Bill #'+store.bill+' | Total Rs '+t+' | '+now.toLocaleDateString('en-IN');cap='Scan for bill details'}
  h+='<div style="width:40mm;margin:8px auto 2px">'+makeQR(code)+'</div><div style="text-align:center">'+cap+'</div><hr><div style="text-align:center">Ekda kha... punha ya!</div>';
  $("rcpt").innerHTML=h;
  var nw=new Date();store.orders.push({no:store.bill,d:dkey(nw),t:nw.toLocaleTimeString("en-IN"),items:Object.keys(cart).map(function(k){var m=find(k);return{n:m.name,q:cart[k],p:m.price}}),total:t});store.sales+=t;store.bills+=1;store.bill+=1;save();
@@ -2415,10 +2427,46 @@ $("done").onclick=function(){
  $("ov").classList.add("show");
  render();
 };
-function makeQR(text){try{var q=qrcode(0,"M");q.addData(text);q.make();return q.createSvgTag({cellSize:3,margin:0,scalable:true})}catch(e){return '<div style="text-align:center;font-size:12px">QR could not load. Check internet.</div>'}}
+function makeQR(text){
+ try{
+  var clean = String(text || "").trim();
+  if(!clean){clean = "Ronnys Craving Point";}
+  var q = qrcode(0, "M");
+  q.addData(clean);
+  q.make();
+  var size = q.getModuleCount();
+  var cell = 10;
+  var margin = 18;
+  var canvas = document.createElement("canvas");
+  var pixelSize = (size + margin * 2) * cell;
+  canvas.width = pixelSize;
+  canvas.height = pixelSize;
+  var ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#000000";
+  for (var r = 0; r < size; r++) {
+   for (var c = 0; c < size; c++) {
+    if (q.isDark(r, c)) {
+     ctx.fillRect((c + margin) * cell, (r + margin) * cell, cell, cell);
+    }
+   }
+  }
+  var dataUrl = canvas.toDataURL("image/png");
+  return '<img src="'+dataUrl+'" alt="QR code" style="display:block;width:160px;height:160px;margin:8px auto 2px;padding:8px;background:#fff;border:2px solid rgba(0,0,0,.08);border-radius:8px;object-fit:contain;image-rendering:pixelated;box-shadow:0 0 0 1px rgba(0,0,0,.04);" />';
+ }catch(e){
+  return '<div style="text-align:center;font-size:12px;padding:12px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#111;">QR could not load.</div>';
+ }
+}
 $("pr").onclick=function(){try{window.print()}catch(e){}};
 $("cl").onclick=function(){$("ov").classList.remove("show")};
-try{$("upi").value=localStorage.getItem("ronny_upi")||""}catch(e){}
+try{
+  var savedUpi = localStorage.getItem("ronny_upi");
+  $("upi").value = "";
+  if(savedUpi && savedUpi.trim()){
+    localStorage.removeItem("ronny_upi");
+  }
+}catch(e){}
 $("upi").oninput=function(){try{localStorage.setItem("ronny_upi",this.value)}catch(e){}};
 function dkey(x){var m=x.getMonth()+1,d=x.getDate();return x.getFullYear()+"-"+(m<10?"0":"")+m+"-"+(d<10?"0":"")+d}
 function wkey(x){var y=new Date(x.getFullYear(),x.getMonth(),x.getDate());y.setDate(y.getDate()-((y.getDay()+6)%7));return dkey(y)}
@@ -2472,13 +2520,13 @@ function newOrder(st){
  var t=total(),nw=new Date(),o={no:store.bill,d:dkey(nw),t:nw.toLocaleTimeString("en-IN"),items:Object.keys(cart).map(function(k){var m=find(k);return{n:m.name,q:cart[k],p:m.price}}),total:t,st:st};
  store.orders.push(o);store.bill+=1;store.bills+=1;store.sales+=(st==="paid"?t:0);save();cart={};$("recv").value="";return o}
 function showReceipt(o){
- var paid=stOf(o)==="paid",h='<div style="text-align:center"><div style="font-size:20px;font-weight:bold">RONNY’S CRAVING POINT</div>Vadapav Vibes Only<br>Laxmi Chowk, Marunji Road<br>Contact: 8767130395</div><hr>';
+ var paid=stOf(o)==="paid",h='<div style="text-align:center"><div style="font-size:20px;font-weight:bold">RONNY’S CRAVING POINT</div>Billing receipt</div><hr>';
  h+='<div>Bill #'+o.no+' &nbsp; '+o.d+' '+o.t+'</div><div><b>'+(paid?'PAID':'IN PROCESS')+'</b></div><hr>';
  o.items.forEach(function(i){h+='<div class="l"><span>'+i.n+' x'+i.q+'</span><span>₹'+i.p*i.q+'</span></div>'});
  h+='<hr><div class="l"><b>Total</b><b>₹'+o.total+'</b></div><hr>';
  var upi=($("upi").value||"").trim(),code,cap;
- if(!paid&&upi){code='upi://pay?pa='+encodeURIComponent(upi)+'&pn='+encodeURIComponent('Ronnys Craving Point')+'&am='+o.total+'&cu=INR&tn='+encodeURIComponent('Bill '+o.no);cap='Scan to pay ₹'+o.total}
- else{code='Ronnys Craving Point | Bill #'+o.no+' | Total Rs '+o.total+' | '+o.d;cap='Scan for bill details'}
+ if(!paid&&upi){code=qrUpiValue(upi,o.total,'Billing Payment');cap='Scan to pay ₹'+o.total}
+ else{code='Bill #'+o.no+' | Total Rs '+o.total+' | '+o.d;cap='Scan for bill details'}
  h+='<div style="width:40mm;margin:8px auto 2px">'+makeQR(code)+'</div><div style="text-align:center">'+cap+'</div><hr><div style="text-align:center">Ekda kha... punha ya!</div>';
  $("rcpt").innerHTML=h;$("ov").classList.add("show")}
 function ordersView(){
@@ -2564,4 +2612,49 @@ $("fimp").onchange=function(){var f=this.files[0];if(!f)return;var r=new FileRea
   var tk=dkey(new Date());store.bill=store.orders.filter(function(o){return o.d===tk}).reduce(function(m,o){return Math.max(m,o.no)},0)+1;
   save();render();say("Loaded "+add+" new orders from "+f.name)}catch(e){say("Could not read this Excel file.")}};
  r.readAsArrayBuffer(f);this.value=""};
+function getOneDriveMessage(){
+ if(!ONE_DRIVE_CONFIG.clientId){return "Set ONE_DRIVE_CONFIG.clientId to a Microsoft app ID in script.js before using OneDrive sync.";}
+ if(!isSecureContext()){return "Open the app via https:// or http://localhost to use OneDrive sync.";}
+ if(!window.msal){return "OneDrive library is still loading. Refresh once the page has loaded.";}
+ return "OneDrive ready.";
+}
+async function ensureDriveFolder(accessToken, folderName){
+ try{
+  var res=await fetch("https://graph.microsoft.com/v1.0/me/drive/root/children",{headers:{Authorization:"Bearer "+accessToken,"Content-Type":"application/json"}});
+  if(!res.ok) return false;
+  var data=await res.json();
+  var item=(data.value||[]).find(function(i){return i.name===folderName && i.folder});
+  if(item) return true;
+  var createRes=await fetch("https://graph.microsoft.com/v1.0/me/drive/root/children",{method:"POST",headers:{Authorization:"Bearer "+accessToken,"Content-Type":"application/json"},body:JSON.stringify({name:folderName,folder:{},"@microsoft.graph.conflictBehavior":"fail"})});
+  return createRes.ok || createRes.status===409;
+ }catch(e){return false;}
+}
+async function uploadToOneDrive(){
+ if(!ONE_DRIVE_CONFIG.clientId){say("Set ONE_DRIVE_CONFIG.clientId before using OneDrive sync.");return;}
+ if(!isSecureContext()){say("Open this app via https:// or localhost to use OneDrive sync.");return;}
+ if(!window.msal){say("Microsoft authentication library is not loaded yet.");return;}
+ try{
+  var authConfig={auth:{clientId:ONE_DRIVE_CONFIG.clientId,authority:"https://login.microsoftonline.com/common",redirectUri:window.location.origin+window.location.pathname}};
+  var msalInstance=new msal.PublicClientApplication(authConfig);
+  var loginResult=await msalInstance.loginPopup({scopes:ONE_DRIVE_CONFIG.scopes});
+  var tokenResult=await msalInstance.acquireTokenSilent({account:loginResult.account,scopes:ONE_DRIVE_CONFIG.scopes}).catch(function(){return msalInstance.acquireTokenPopup({scopes:ONE_DRIVE_CONFIG.scopes})});
+  var payload=JSON.stringify({exportedAt:new Date().toISOString(),store:store,source:"ronnys-billing-app"});
+  var folderName=ONE_DRIVE_CONFIG.folderName||"Ronnys Billing";
+  var ok=await ensureDriveFolder(tokenResult.accessToken, folderName);
+  if(!ok){say("Could not create or access the OneDrive folder.");return;}
+  var url="https://graph.microsoft.com/v1.0/me/drive/root:/"+encodeURIComponent(folderName)+"/"+encodeURIComponent(ONE_DRIVE_CONFIG.fileName)+":/content";
+  var res=await fetch(url,{method:"PUT",headers:{Authorization:"Bearer "+tokenResult.accessToken,"Content-Type":"application/json"},body:payload});
+  if(!res.ok){throw new Error("OneDrive upload failed: "+res.status);}
+  say("Uploaded billing data to OneDrive.");
+ }catch(e){
+  say("OneDrive upload failed. Configure the Microsoft app ID and host over HTTPS.");
+ }
+}
+$("odSignin").onclick=function(){
+ if(!ONE_DRIVE_CONFIG.clientId){say("Set ONE_DRIVE_CONFIG.clientId in script.js first.");return;}
+ if(!isSecureContext()){say("Use HTTPS or localhost before signing in to OneDrive.");return;}
+ if(!window.msal){say("MSAL library is still loading. Refresh the page.");return;}
+ uploadToOneDrive();
+};
+$("odUpload").onclick=function(){uploadToOneDrive();};
 load();buildMenu();render();
